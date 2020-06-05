@@ -1,0 +1,145 @@
+/*
+Override handler to partial url matching against simple ESP8266 web server request handlers
+e.g. to handle http://my_device/my_version/my_path/my_parameter on a wild card basis - i might do this
+server.on( HTTP_GET, "/my_device/*/parameter" ) to handle for all versions or 
+server.on( HTTP_GET, "/*/v1/parameter" ) to handle for all versions and so on.
+In this case I want to do match partial paths, match/ignore case of path, use wildcards
+*/
+
+
+#ifndef _REQUESTHANDLERSIMPLEX_H
+#define _REQUESTHANDLERSIMPLEX_H
+
+#include "RequestHandler.h"
+#include "mimetable.h"
+#include "WString.h"
+
+class RequestHandlerImplEx : public RequestHandler 
+{
+ protected:
+ bool _enableWilds = false;
+ bool _allowPartial = false;
+ bool _isCaseSensitive = false;
+ 
+ public:
+ 
+ RequestHandlerImplEx( bool isCaseSensitive, bool allowPartial, bool enableWilds)
+ {
+ _enableWilds = enableWilds;
+ _allowPartial = allowPartial;
+ _isCaseSensitive = isCaseSensitive;
+ }
+ 
+ bool canHandle(HTTPMethod method, String uri) 
+ { 
+   struct UriSpec 
+   {
+    String protocol;
+    String host;
+    String port;
+    String** pString;
+    int nDtrings;
+    String username;
+    String password;
+    String argument;
+   } uriSpec[2];
+ 
+  char *p = _uri;
+  char *str;
+  // http://user:passoword@host/path/to/resource:port?argument1=a&argument2=b
+  char delims1[] = {"//"};//root protocol section
+  char userDelims[] = {":@"};//User identity/password delimiters
+  char delims2[] = {"/"};//path section delimiter
+  char delims3[] = {"?&"};//arguments section delimiters
+  int chunkCtr = 0;
+  bool status = false;    
+  int protoIndex = 0;
+  String proto;
+  String hostname;
+  String user;
+  String plainPass;
+  String remainder;
+
+ if ( _method != HTTP_ANY && _method != requestMethod)
+    return false;
+
+  //Extract the protocol
+  protoIndex = _uri.indexOf( delims1 );
+  proto = _uri.substring( 0, protoIndex );
+  remainder = _uri.substring( protoIndex+1, _uri.length()-protoIndex  );
+  
+  //Check for user/password 
+  //Can have user without password?
+  passIndex = remainder.indexOf( "@" );
+  if ( passIndex >=0 && passIndex < remainder.length() -1 )
+  {
+      user = remainder.substring( 0, passIndex );
+      int separator = 0;
+      if ( separator = user.indexOf( ":") >= 0 )
+      {
+         password = user.substring( separator+1 , user.length() );
+         user     = user.substring( 0, separator );
+      }
+
+      hostname = remainder.substring( remainder.indexOf("@")+1, remainder.indexOf("/") );
+  }
+  else if( remainder[passIndex] == ":" ) 
+  {
+      user     = remainder.substring( 0, remainder.length() - passIndex );
+      hostname = remainder.substring( remainder.indexOf("@")+1, remainder.indexOf("/") );
+  }
+  else
+  {
+      user="";
+      password="";
+      //have to watch out - there may not be  a terminal '/' after the hostname.
+      if ( remainder.indexOf( "/" ) >= 0 )
+         hostname = remainder.substring( 0, remainder.indexOf("/") );
+      else
+         hostname = remainder;
+   }
+
+ if( _enableWilds )
+ {  
+  
+  if( protoIndex >= 0 )
+  {
+    //Setup to start Search from immediately after the protocol 
+    p = &_uri[protIndex+1];
+  }
+  
+   while ((str = strtok_r(&p, delims2, &p)) != NULL)
+   {
+      //look for user:password@ structures
+
+      //look for component parts of the URI
+      
+
+   }
+
+ }
+ 
+ if ( _isCaseSensitive ) 
+   if( requestUri != _uri )
+      return false;
+ else
+   if ( !requestUri.equalsIgnoreCase( _uri ) )
+     return false;
+
+ 
+ return true;
+ }
+
+  bool handle(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri) 
+  {   
+    /* do brightness stuff here */
+  }
+} 
+
+//Declare an instance of myHandler in the client code and add it to the server handlers 
+void setup() 
+{
+  server.addHandler(&myHandler);
+}
+
+#endif
