@@ -40,15 +40,16 @@ void handleFilterCountPut(void);
 //GET /{DeviceType}/{DeviceNumber}/SupportedActions Returns the list of action names supported by this driver.  
 void handleSupportedActionsGet(void);
 
+int serverTransID= 0;
+
 void handleAction(void)
 {
     String message;
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
-    uint32_t transID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
-    
-    jsonResponseBuilder( root, clientID, transID, "Action", notImplemented, "Not implemented" );
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Action", notImplemented, "Not implemented" );
     root["Value"]= "";
     root.printTo(message);
     server.send(200, "application/json", message);
@@ -59,11 +60,11 @@ void handleCommandBlind(void)
 {
     String message;
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
-    uint32_t transID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
         
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
-    jsonResponseBuilder( root, clientID, transID, "Action", notImplemented, "Not implemented" );
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "CommandBlind", notImplemented, "Not implemented" );
     root["Value"]= "";
     root.printTo(message);
     server.send(200, "application/json", message);
@@ -74,11 +75,11 @@ void handleCommandBool(void)
 {
     String message;
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
-    uint32_t transID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
     
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
-    jsonResponseBuilder( root, clientID, transID, "CommandBool", notImplemented, "Not implemented" );
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "CommandBool", notImplemented, "Not implemented" );
     root["Value"]= false; 
     root.printTo(message);   
     server.send(200, "application/json", message);
@@ -91,9 +92,9 @@ void handleCommandString(void)
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
-    uint32_t transID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
 
-    jsonResponseBuilder( root, clientID, transID, "CommandString", notImplemented, "Not implemented" );
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "CommandString", notImplemented, "Not implemented" );
     root["Value"]= ""; 
     root.printTo(message);   
     server.send(200, "application/json", message);
@@ -107,9 +108,8 @@ void handleConnected(void)
     JsonObject& root = jsonBuff.createObject();
 
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
-    uint32_t transID = (uint32_t)server.arg("ClientTransactionID").toInt();
-    
-    jsonResponseBuilder( root, clientID, transID, "Connected", Success, "" );
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", Success, "" );
     
     if ( server.method() == HTTP_PUT )
     { 
@@ -123,7 +123,7 @@ DEBUG_OUTPUT.printf( "handleConnected: arg:%s, connected: %i\n", server.arg("Con
         if ( connected )//already true
         {
           //Check error numbers
-          jsonResponseBuilder( root, clientID, transID, "Connected", Success, "" /*"Setting connected when already connected"*/ );        
+          jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", Success, "" /*"Setting connected when already connected"*/ );        
           root["Value"]= true;    
           root.prettyPrintTo(message);
 #ifdef DEBUG_ESP_HTTP_SERVER
@@ -155,14 +155,14 @@ DEBUG_OUTPUT.printf( "handleConnected: output:%s\n", message.c_str() );
         else
         {
           //Check error numbers
-          jsonResponseBuilder( root, clientID, transID, "Connected", Success, "Clearing 'connected' when already cleared" );        
+          jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", Success, "Clearing 'connected' when already cleared" );        
           root.remove( "Value" );
           root.printTo(message);   
           server.send( 200, "application/json", message);
           return;          
         }
       }
-      jsonResponseBuilder( root, clientID, transID, "Connected", Success, "" );        
+      jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", Success, "" );        
       root.remove( "Value" );
       root.printTo(message);
       server.send( 200, "application/json", message);
@@ -171,7 +171,7 @@ DEBUG_OUTPUT.printf( "handleConnected: output:%s\n", message.c_str() );
     else if ( server.method() == HTTP_GET )
     {
       //Check error numbers
-      jsonResponseBuilder( root, clientID, transID, "Connected", Success, "" );        
+      jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", Success, "" );        
       root["Value"] = connected;      
       root.printTo(message);
       server.send( 200, "application/json", message);
@@ -179,7 +179,7 @@ DEBUG_OUTPUT.printf( "handleConnected: output:%s\n", message.c_str() );
     }
     else
     {
-      jsonResponseBuilder( root, clientID, transID, "Connected", invalidOperation , "Unexpected HTTP method" );        
+      jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", invalidOperation , "Unexpected HTTP method" );        
       root["Value"] = connected;      
       root.printTo(message);
       server.send( 200, "application/json", message);
@@ -191,11 +191,11 @@ void handleDescriptionGet(void)
 {
     String message;
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
-    uint32_t transID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
 
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
-    jsonResponseBuilder( root, clientID, transID, "Description", 0, "" );    
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Description", 0, "" );    
     root["Value"]= Description;    
     root.printTo(message);
 #ifdef DEBUG_ESP_HTTP_SERVER
@@ -210,11 +210,11 @@ void handleDriverInfoGet(void)
 {
     String message;
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
-    uint32_t transID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
 
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
-    jsonResponseBuilder( root, clientID, transID, "DriverInfo", Success, "" );    
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "DriverInfo", Success, "" );    
     root["Value"]= DriverInfo;    
     root.printTo(message);
 #ifdef DEBUG_ESP_HTTP_SERVER
@@ -229,11 +229,11 @@ void handleDriverVersionGet(void)
 {
     String message;
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
-    uint32_t transID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
 
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
-    jsonResponseBuilder( root, clientID, transID, "DriverVersion", Success, "" );    
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "DriverVersion", Success, "" );    
     root["Value"]= DriverVersion;    
     root.printTo(message);
 #ifdef DEBUG_ESP_HTTP_SERVER
@@ -248,11 +248,11 @@ void handleInterfaceVersionGet(void)
 {
     String message;
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
-    uint32_t transID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
 
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
-    jsonResponseBuilder( root, clientID, transID, "InterfaceVersion", Success, "" );    
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "InterfaceVersion", Success, "" );    
     root["Value"]= DriverVersion;    
     root.printTo(message);
 #ifdef DEBUG_ESP_HTTP_SERVER
@@ -267,11 +267,11 @@ void handleNameGet(void)
 {
     String message;
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
-    uint32_t transID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
 
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
-    jsonResponseBuilder( root, clientID, transID, "Name", Success, "" );    
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Name", Success, "" );    
     root["Value"] = DriverName;    
     root.printTo(message);
 #ifdef DEBUG_ESP_HTTP_SERVER
@@ -285,17 +285,67 @@ void handleSupportedActionsGet(void)
 {
     String message;
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
-    uint32_t transID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
 
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
-    jsonResponseBuilder( root, clientID, transID, "SupportedActions", Success, "" );    
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "SupportedActions", Success, "" );    
     JsonArray& values  = root.createNestedArray("Value");   
     values.add(""); //Explicitly empty array
     root.printTo(message);
     server.send(200, "application/json", message);
     return ;
 }
+
+void handleAPIversions(void)
+{
+    String message;
+    uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
+
+    DynamicJsonBuffer jsonBuff(256);
+    JsonObject& root = jsonBuff.createObject();
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "APIversions", Success, "" );  
+    JsonArray& values  = root.createNestedArray("Value");     
+    values.add(atoi(InterfaceVersion.c_str()));    
+    root.printTo(message);
+#ifdef DEBUG_ESP_HTTP_SERVER
+DEBUG_OUTPUT.println( message );
+#endif
+    
+    server.send(200, "application/json", message);
+    return ;
+}
+
+void handleAPIconfiguredDevices(void)
+{
+    String message;
+    uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
+
+    DynamicJsonBuffer jsonBuff(256);
+    JsonObject& root = jsonBuff.createObject();
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "APIversions", Success, "" );  
+    JsonArray& values  = root.createNestedArray("Value");
+    
+    DynamicJsonBuffer jsonBuff2(256);
+    JsonObject& device= jsonBuff2.createObject();
+    device["DeviceName"]= Description;
+    device["DeviceType"]= DriverName;
+    device["DeviceNumber"]= INSTANCE_NUMBER;
+    device["UniqueID"]= GUID;    
+
+    values.add(device);    
+    root.printTo(message);
+#ifdef DEBUG_ESP_HTTP_SERVER
+DEBUG_OUTPUT.println( message );
+#endif
+    
+    server.send(200, "application/json", message);
+    return ;
+}
+
+
 
 #endif
   
