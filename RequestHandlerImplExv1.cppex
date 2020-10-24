@@ -1,0 +1,56 @@
+/*
+Override handler to partial url matching against simple ESP8266 web server request handlers
+e.g. to handle http://my_device/my_version/my_path/my_parameter on a wild card basis - i might do this
+server.on( HTTP_GET, "/my_device/*/parameter" ) to handle for all versions or 
+server.on( HTTP_GET, "/*/v1/parameter" ) to handle for all versions and so on.
+In this case I want to do match partial paths, match/ignore case of path, use wildcards
+*/
+
+
+#ifndef _REQUESTHANDLERSIMPLEX_H
+#define _REQUESTHANDLERSIMPLEX_H
+
+#include "RequestHandler.h"
+#include "mimetable.h"
+#include "WString.h"
+
+class RequestHandlerImplEx : public RequestHandler 
+{
+ protected:
+ bool _enableWilds = false;
+ bool _allowPartial = false;
+ bool _isCaseSensitive = false;
+ 
+ public:
+ 
+ RequestHandlerImplEx( bool isCaseSensitive, bool allowPartial, bool enableWilds)
+ {
+ _enableWilds = enableWilds;
+ _allowPartial = allowPartial;
+ _isCaseSensitive = isCaseSensitive;
+ }
+ 
+ bool canHandle(HTTPMethod method, String uri) 
+ { 
+ if (_method != HTTP_ANY && _method != requestMethod)
+    return false;
+
+ if (requestUri != _uri)
+    return false;
+
+ return true;
+ }
+
+  bool handle(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri) 
+  {   
+    /* do brightness stuff here */
+  }
+} 
+//Declare an instance of myHandler in the client code and add it to the server handlers 
+
+void setup() 
+{
+  server.addHandler(&myHandler);
+}
+
+#endif
