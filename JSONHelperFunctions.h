@@ -29,12 +29,11 @@ void jsonResponseBuilder( JsonObject& root, unsigned int clientID, unsigned int 
     root["ClientID"]= clientID;
     root["ClientTransactionID"]= clientTransID;
     root["ServerTransactionID"]= serverTransID;
-    root["Method"]= methodName;
-    root["ErrorNumber"]= errNum;
+    root["Method"] = methodName;
+    root["ErrorNumber"] = errNum;
     root["ErrorMessage"] = errMsg;
 }
 
-/*
 String& debugURI( String& message)
   {
    boolean listArgs= false;
@@ -74,6 +73,6 @@ String& debugURI( String& message)
     }
   return message;
   }
-*/
   
 #endif
+

@@ -15,5 +15,4 @@ extern List sourceWeights;
 //Indicates whether the environment is safe for telescope operations due to weather, power, temperature, inter-locks etc. 
 void handleIsSafe(void);
 
-
 #endif 

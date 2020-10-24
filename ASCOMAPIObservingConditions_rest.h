@@ -70,4 +70,5 @@ void handleCloudcover(void);
 
 //GET ​/observingconditions​/{device_number}​/timesincelastupdate - this seems confused - individual sensors or the last sensor ?
 //Return the time since the sensor value was last updated
+
 #endif 

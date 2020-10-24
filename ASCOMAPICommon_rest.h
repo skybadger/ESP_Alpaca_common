@@ -15,6 +15,8 @@ extern String DriverVersion;
 extern String DriverInfo;
 extern String Description;
 extern String InterfaceVersion;
+extern long GUID
+extern long INSTANCE_NUMBER;
 */
 //PUT /{DeviceType}/{DeviceNumber}/Action Invokes the specified device-specific action.
 void handleAction(void);
@@ -40,25 +42,29 @@ void handleFilterCountPut(void);
 //GET /{DeviceType}/{DeviceNumber}/SupportedActions Returns the list of action names supported by this driver.  
 void handleSupportedActionsGet(void);
 
+//TODO - fixup connected checks when functions not currently implemented get implemented
+
 int serverTransID= 0;
 
 void handleAction(void)
 {
     String message;
+    //Dont care about client IDs for read-only data 
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
     jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Action", notImplemented, "Not implemented" );
-    root["Value"]= "";
+    root["Value"] = "";
     root.printTo(message);
-    server.send(200, "application/json", message);
+    server.send(200, F("application/json"), message);
     return;
  }
 
 void handleCommandBlind(void)
 {
     String message;
+    //Dont care about client IDs for read-only data 
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
         
@@ -67,13 +73,14 @@ void handleCommandBlind(void)
     jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "CommandBlind", notImplemented, "Not implemented" );
     root["Value"]= "";
     root.printTo(message);
-    server.send(200, "application/json", message);
+    server.send(200, F("application/json"), message);
     return;
 }
 
 void handleCommandBool(void)
 {
     String message;
+    //Dont care about client IDs for read-only data 
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
     
@@ -82,7 +89,7 @@ void handleCommandBool(void)
     jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "CommandBool", notImplemented, "Not implemented" );
     root["Value"]= false; 
     root.printTo(message);   
-    server.send(200, "application/json", message);
+    server.send(200, F("application/json"), message);
     return;
 }
 
@@ -91,105 +98,143 @@ void handleCommandString(void)
     String message;
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
-    uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
-    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    
+    String argsToSearchFor[] = {"clientID","clientTransID"};
+    uint32_t clientID = 0;
+    uint32_t clientTransID = 0;
+
+    if ( hasArgIC( argsToSearchFor[0], server, false ) )
+        clientID = (uint32_t)server.arg( argsToSearchFor[0] ).toInt();
+
+    if( hasArgIC( argsToSearchFor[1], server, false ) )
+       clientTransID = (uint32_t)server.arg( argsToSearchFor[1]).toInt();
 
     jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "CommandString", notImplemented, "Not implemented" );
     root["Value"]= ""; 
     root.printTo(message);   
-    server.send(200, "application/json", message);
+    server.send(200, F("application/json"), message);
     return;
 }
 
+
+/*
+Record the clientID of the connected client in the connected variable. 
+Use a value of -1 ti indicate not connected. 
+TODO- record a count for connected - disconnected
+
+*/
 void handleConnected(void)
 {
     String message;
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
-
-    uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
-    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
-    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", Success, "" );
+    String argsToSearchFor[] = {"clientID","clientTransID","Connected"};
+    uint32_t clientID;
+    uint32_t clientTransID;
+    bool tobeConnected = false;
+    int retVal = 200;
     
+    //Updated to fix case-sensitivity issues when putting a value since tobeConnected defaults to false if not found when supplied as a different case.
+    if( hasArgIC( argsToSearchFor[0], server, false ) )
+        clientID = (uint32_t)server.arg( argsToSearchFor[0] ).toInt();
+
+    if( hasArgIC( argsToSearchFor[1], server, false ) )
+       clientTransID = (uint32_t)server.arg( argsToSearchFor[1]).toInt();
+    
+    if( hasArgIC( argsToSearchFor[2], server, false ) )
+       tobeConnected = (boolean) server.arg( argsToSearchFor[2]).equalsIgnoreCase( "true");
+         
     if ( server.method() == HTTP_PUT )
     { 
 #ifdef DEBUG_ESP_HTTP_SERVER
-DEBUG_OUTPUT.printf( "handleConnected: arg:%s, connected: %i\n", server.arg("Connected").c_str(), connected );
+DEBUG_OUTPUT.printf( "handleConnected: new: %s, this client ID: %i, connectedID: %i\n", server.arg(argsToSearchFor[2]).c_str(), clientID, connected );
 #endif
-
-      //don't like the logic here - if it's already connected for this client we should refuse a connect. 
-      if( server.arg("Connected").equalsIgnoreCase( "true" ) ) 
-      { //setting to true 
-        if ( connected )//already true
-        {
-          //Check error numbers
-          jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", Success, "" /*"Setting connected when already connected"*/ );        
-          root["Value"]= true;    
-          root.prettyPrintTo(message);
-#ifdef DEBUG_ESP_HTTP_SERVER
-DEBUG_OUTPUT.printf( "handleConnected: output:%s\n", message.c_str() );
-#endif
-          server.send( 200, "application/json", message ); 
-          return;
-        }
-        else //OK
-        {
-           connected = true;
-           root["Value"] = true; 
-        }
-      }
-      else //'Connected' = false
+      if ( server.hasArg( argsToSearchFor[2] ) )
       {
-        if ( connected ) //
-        {
-          //If we are disconnecting, we should park or home and close the shutter ?
-#ifdef _ASCOM_Dome
-          if( parkDomeOnDisconnect )
-              addDomeCmd( 0, 0, CMD_DOME_PARK, 0);
-          if( closeShutterOnDisconnect )
-              addDomeCmd( 0, 0, CMD_SHUTTER_CLOSE, 0 );
-#endif 
-          connected = false; //OK          
-          root.remove( "Value" );
-        }
-        else
-        {
-          //Check error numbers
-          jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", Success, "Clearing 'connected' when already cleared" );        
-          root.remove( "Value" );
-          root.printTo(message);   
-          server.send( 200, "application/json", message);
-          return;          
-        }
-      }
-      jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", Success, "" );        
-      root.remove( "Value" );
-      root.printTo(message);
-      server.send( 200, "application/json", message);
-      return;          
+         if ( tobeConnected == true ) 
+         { //setting to true 
+           if ( connected != NOT_CONNECTED )//already true with another clientID, so refuse to set
+           {
+             //Check error numbers
+             jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", notConnected, "Another client already connected" );        
+             root["Value"] = false;
+           }
+           else //OK
+           {
+              connected = clientID;
+              jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", Success, "" );      
+              root["Value"] = true; 
+              connectionCtr++;
+           }
+         }
+         else //'tobeConnected' = false
+         {
+           if ( connected != NOT_CONNECTED ) //
+           {
+             //If we are disconnecting, we should park or home and close the shutter ?
+             //We could count the number of connects and disconnects from different clientIDs to trac when noone is finally connected. 
+             //Relies on clients not diconnecting multiple times. 
+             //
+             if( connected == clientID )
+             {
+   #ifdef _ASCOM_Dome
+                if( parkDomeOnDisconnect )
+                    addDomeCmd( 0, 0, CMD_DOME_PARK, 0);
+                if( closeShutterOnDisconnect )
+                    addShutterCmd( 0, 0, CMD_SHUTTER_CLOSE, 0 );
+   #endif 
+                jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", Success, "" );        
+                connected = NOT_CONNECTED; //OK
+                root["Value"] = false;
+                //root.remove( "Value" );
+                connectionCtr--;
+             }
+             else
+             {
+                jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", notConnected, "This client is not the connected client" );        
+                root["Value"] = false;
+             }
+           }
+           else //not already connected
+           {
+             //Check error numbers
+             jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", Success, "" );        
+             //root.remove( "Value" );
+             root["Value"] = false;
+             connected = NOT_CONNECTED;
+           }
+         }
+       }
+       else
+       {
+         jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", invalidOperation , "Unable to parse 'connected' value  during PUT" );
+       }
     }
     else if ( server.method() == HTTP_GET )
     {
       //Check error numbers
       jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", Success, "" );        
-      root["Value"] = connected;      
-      root.printTo(message);
-      server.send( 200, "application/json", message);
-      return;          
+      root["Value"] = (connected != NOT_CONNECTED);      
     }
     else
     {
       jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Connected", invalidOperation , "Unexpected HTTP method" );        
       root["Value"] = connected;      
-      root.printTo(message);
-      server.send( 200, "application/json", message);
-      return;          
     }
+
+   root.printTo(message);
+#ifdef DEBUG_ESP_HTTP_SERVER
+   DEBUG_OUTPUT.printf( "handleConnected: %s\n", message.c_str() );
+#endif
+   server.send( retVal, F("application/json"), message);
+   return;
 }
 
 void handleDescriptionGet(void)
 {
     String message;
+    
+    //Dont care about client IDs for read-only data 
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
 
@@ -201,7 +246,7 @@ void handleDescriptionGet(void)
 #ifdef DEBUG_ESP_HTTP_SERVER
 DEBUG_OUTPUT.println( message );
 #endif
-    server.send(200, "application/json", message);
+    server.send(200, F("application/json"), message);
 
     return ;
 }
@@ -209,6 +254,8 @@ DEBUG_OUTPUT.println( message );
 void handleDriverInfoGet(void)
 {
     String message;
+    //Dont care about client IDs for read-only data 
+
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
 
@@ -221,13 +268,14 @@ void handleDriverInfoGet(void)
 DEBUG_OUTPUT.println( message );
 #endif
     
-    server.send(200, "application/json", message);
+    server.send(200, F("application/json"), message);
     return ;
 }
 
 void handleDriverVersionGet(void)
 {
     String message;
+    //Dont care about client IDs for read-only data 
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
 
@@ -236,17 +284,19 @@ void handleDriverVersionGet(void)
     jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "DriverVersion", Success, "" );    
     root["Value"]= DriverVersion;    
     root.printTo(message);
+    
 #ifdef DEBUG_ESP_HTTP_SERVER
 DEBUG_OUTPUT.println( message );
 #endif
 
-    server.send(200, "application/json", message);
+    server.send(200, F("application/json"), message);
     return ;
 }
 
 void handleInterfaceVersionGet(void)
 {
     String message;
+    //Dont care about client IDs for read-only data 
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
 
@@ -259,13 +309,14 @@ void handleInterfaceVersionGet(void)
 DEBUG_OUTPUT.println( message );
 #endif
 
-    server.send(200, "application/json", message);
+    server.send(200, F("application/json"), message);
     return ;
 }
 
 void handleNameGet(void)
 {
     String message;
+    //Dont care about client IDs for read-only data 
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
 
@@ -277,13 +328,14 @@ void handleNameGet(void)
 #ifdef DEBUG_ESP_HTTP_SERVER
 DEBUG_OUTPUT.println( message );
 #endif
-    server.send(200, "application/json", message);
+    server.send(200, F("application/json"), message);
     return ;
 }
 
 void handleSupportedActionsGet(void)
 {
     String message;
+    //Dont care about client IDs for read-only data 
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
 
@@ -293,13 +345,14 @@ void handleSupportedActionsGet(void)
     JsonArray& values  = root.createNestedArray("Value");   
     values.add(""); //Explicitly empty array
     root.printTo(message);
-    server.send(200, "application/json", message);
+    server.send(200, F("application/json"), message);
     return ;
 }
 
 void handleAPIversions(void)
 {
     String message;
+    //Dont care about client IDs for read-only data 
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
 
@@ -313,13 +366,14 @@ void handleAPIversions(void)
 DEBUG_OUTPUT.println( message );
 #endif
     
-    server.send(200, "application/json", message);
+    server.send(200, F("application/json"), message);
     return ;
 }
 
 void handleAPIconfiguredDevices(void)
 {
     String message;
+    //Dont care about client IDs for read-only data 
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
 
@@ -341,11 +395,8 @@ void handleAPIconfiguredDevices(void)
 DEBUG_OUTPUT.println( message );
 #endif
     
-    server.send(200, "application/json", message);
+    server.send(200, F("application/json"), message);
     return ;
 }
 
-
-
 #endif
-  

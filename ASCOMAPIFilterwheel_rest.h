@@ -409,5 +409,4 @@ String& setupFormBuilder( String& htmlForm, String& errMsg )
  return htmlForm;
 }
 
-
 #endif
