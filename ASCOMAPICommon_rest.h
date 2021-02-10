@@ -8,6 +8,15 @@ File to be included into relevant device REST setup
 #include "ArduinoJson.h"
 #include "JSONHelperFunctions.h"
 
+//#define DEBUG_ESP_HTTP_SERVER - re-used from ESP8266WebServer.h but due to a dependency copied here. 
+#ifndef DEBUG_OUTPUT
+#ifdef DEBUG_ESP_PORT
+#define DEBUG_OUTPUT DEBUG_ESP_PORT
+#else
+#define DEBUG_OUTPUT Serial
+#endif
+#endif
+
 /*
 extern bool connected;
 extern String DriverName;
@@ -45,6 +54,7 @@ void handleSupportedActionsGet(void);
 //TODO - fixup connected checks when functions not currently implemented get implemented
 
 int serverTransID= 0;
+const unsigned int NOT_CONNECTED = (unsigned int) -1;
 
 void handleAction(void)
 {
