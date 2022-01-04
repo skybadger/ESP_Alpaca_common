@@ -5,6 +5,29 @@
 */
 
 /*
+@brief Function to scan the wifi channels for SSIDS and strengths, prits output to default serial terminal
+*/
+void scanNet(void)
+{
+  int i;
+  int n;
+  WiFi.disconnect();
+  n = WiFi.scanNetworks(false, true);
+  if (n == 0) 
+  {
+    Serial.println( F("no networks found") );
+  } 
+  else 
+  {
+    Serial.println( F(" networks found ") );
+    for ( i = 0; i < n; ++i)
+    {
+      Serial.printf( "ID: %s, Strength: %i \n", WiFi.SSID(i).c_str(), WiFi.RSSI(i) );
+    }
+  }
+}
+
+/*
 int stricmp(char* a, char*b)
 {
    int i; 
@@ -23,6 +46,7 @@ int stricmp(char* a, char*b)
 /*
 * Pass in the string you want to check exists. 
 * modifies the string to the case-insensitive version found. 
+* This doesn't work for urls which may be mixed-case. 
 */
 bool hasArgIC( String& check, ESP8266WebServer& ref, bool caseSensitive )
 {
@@ -44,6 +68,9 @@ bool hasArgIC( String& check, ESP8266WebServer& ref, bool caseSensitive )
    return ( ref.hasArg( check ) );
 }
 
+/*
+@brief function to read i2c bus and identify responding devices - output as string summary
+*/
 String scanI2CBus()
   {
   int nDevices = 0;
@@ -62,19 +89,19 @@ String scanI2CBus()
  
     if (error == 0)
     {
-      Serial.print("I2C device found at address (dec)");
+      Serial.print( F("I2C device found at address (dec)") );
       if (address<16)
         Serial.print("0");
       Serial.print(address,DEC);
       Serial.println("  !");
-      output.concat( "I2C device found at address (dec)");
+      output.concat( F("I2C device found at address (dec)" ));
       output.concat( address ) ;
       output.concat( "\n" );
       nDevices++;
     }
     else if (error==4)
     {
-      Serial.print("Unknown error at address 0x");
+      Serial.print( F("Unknown error at address 0x") ) ;
       if (address<16)
         Serial.print("0");
       Serial.println(address ,HEX);
@@ -82,20 +109,20 @@ String scanI2CBus()
   }
   if (nDevices == 0)
   {
-    DEBUGSL1("No I2C devices found");
-    output = String( "No I2C devices found\n");
+    Serial.println( F("No I2C devices \n") );
+    output = String( F("No I2C devices found\n") );
   }
   else
-    DEBUGS1("done\n");
+    Serial.println( F("scanI2CBus done\n") );
   
   return output;
   }
 
 
 //bool setupMQTT( char* thisId, char* user, char* passwd, char* server );
-
-
-/*MQTT
+/*
+  @brief Connect to MQTT and subscribe.. 
+  MQTT
   Returns the current state of the client. If a connection attempt fails, this can be used to get more information about the failure.
   int - the client state, which can take the following values (constants defined in PubSubClient.h):
   -4 : MQTT_CONNECTION_TIMEOUT - the server didn't respond within the keepalive time
@@ -108,11 +135,12 @@ String scanI2CBus()
   3 : MQTT_CONNECT_UNAVAILABLE - the server was unable to accept the connection
   4 : MQTT_CONNECT_BAD_CREDENTIALS - the username/password were rejected
   5 : MQTT_CONNECT_UNAUTHORIZED - the client was not authorized to connect
+ Dependencies - 
+  volatile unsigned int timeoutFlag ;
+  etsTimer timeoutTimer
+  ets timer handler 
+
 */
-//Dependencies - 
-// volatile unsigned int timeoutFlag ;
-// etsTimer timeoutTimer
-// ets timer handler 
 void reconnectNB() 
 {
   //Non-blocking version
@@ -120,11 +148,11 @@ void reconnectNB()
    {
      if( timeoutFlag ) //Timeout - try again
      {   
-         Serial.print("Repeating MQTT connection attempt...");
-         if ( !client.connect(thisID, pubsubUserID, pubsubUserPwd ) )
+         DEBUG_MQTT(F("Repeating MQTT connection attempt..."));
+         if ( !client.connect( thisID, String(pubsubUserID).c_str(), String(pubsubUserPwd).c_str() ) ) //PROGMEM
          {  //Set a one-off timer to try next time around. 
-            Serial.print("connect failed, rc=");
-            Serial.println(client.state());
+            DEBUG_MQTT( F("connect failed, rc="), client.state() );
+            Serial.println( client.state() );
             timeoutFlag = false;
             timerSet = true;
             ets_timer_arm_new( &timeoutTimer, 5000, 0/*one-shot*/, 1);           
@@ -137,11 +165,11 @@ void reconnectNB()
    }
    else //timer not set 
    {
-     Serial.print("Attempting MQTT connection...");
-     if ( !client.connect(thisID, pubsubUserID, pubsubUserPwd ) )
+     Serial.print( F("Attempting MQTT connection..."));
+     if ( !client.connect( thisID, String(pubsubUserID).c_str(), String(pubsubUserPwd ).c_str() ) ) //PROGMEM
      {  
-        Serial.print("connect failed, rc=");
-        Serial.println(client.state());
+        DEBUG_MQTT(F("connect failed, rc=%i"), client.state() );
+        //Serial.println( client.state());
 
         //Set a one-off timer to try next time around. 
         timeoutFlag = false;
@@ -151,8 +179,8 @@ void reconnectNB()
      else
      {
         //publishHealth();
-        client.subscribe(inTopic);
-        Serial.println("MQTT connection regained.");
+        client.subscribe( String(inTopic).c_str(), 1); //PROGMEM
+        DEBUG_MQTT(F("MQTT connection regained.") );
      }
    }
 return;
@@ -161,22 +189,22 @@ return;
 void reconnect( void )
 {
   String output;
-  DEBUGSL1( "Entering reconnect" );
+  DEBUG_MQTT( F("Entering reconnect" ) );
   // Loop until we're reconnected
   while ( !client.connected() )
   {
-    Serial.print("Attempting MQTT connection...");
+    DEBUG_MQTT(F("Attempting sync MQTT connection..."));
     // Attempt to connect
-    if (client.connect(thisID, pubsubUserID, pubsubUserPwd ) )
+    if (client.connect( thisID, String(pubsubUserID).c_str(), String(pubsubUserPwd ).c_str() ) )//PROGMEM
     {
       //publish to our device topic(s)
-      Serial.println("connected");
+      DEBUG_MQTT( F("connected") );
       // Resubscribe
-      client.subscribe(inTopic);
+      client.subscribe( String(inTopic).c_str(), 1 ); //PROGMEM
     }
     else
     {
-      Serial.printf("failed, rc= %i, try again in 5 seconds \r\n", client.state() );
+      Serial.printf_P( PSTR("failed, rc= %i, try again in 5 seconds \r\n"), client.state() );
 //      // Wait 5 seconds before retrying
 //      for (int i = 0; i < 5000; i++)
 //      {
@@ -186,8 +214,8 @@ void reconnect( void )
 //      }
     }
   }
-  Serial.println( "Actually connected");
-  DEBUGSL1( "Leaving reconnect" );
+  DEBUG_MQTT( F("Actually connected") );
+  DEBUG_MQTT( F("Leaving reconnect") );
 }
 
 //Creating timestrings 
