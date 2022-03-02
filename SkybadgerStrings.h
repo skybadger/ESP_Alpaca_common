@@ -1,6 +1,9 @@
 #if !defined _SKYBADGER_STRINGS_H_
 #define _SKYBADGER_STRINGS_H_
 
+//ALPACA management interface Strings 
+const char* Manufacturer PROGMEM = "Skybadger Astronomy";
+
 //Strings
 const char* ssid1     =        "";
 const char* password1 =        "";
