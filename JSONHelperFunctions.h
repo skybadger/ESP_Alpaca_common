@@ -6,7 +6,7 @@
 //extern ESP8266WebServer server;
 
 String& debugURI(String& message);
-void jsonResponseBuilder( JsonObject&, uint32_t clientTransID, uint32_t transID, String methodName, int errNum , String errMsg );
+void jsonResponseBuilder( JsonObject&, unsigned int clientTransID, unsigned int transID, unsigned int serverTransID, String methodName, int errNum , String errMsg );
 
 //JSON error structures used in ASCOM REST calls
 //https://ascom-standards.org/api/?urls.primaryName=Remote%20Management%20API
