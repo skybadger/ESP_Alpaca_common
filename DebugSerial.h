@@ -21,8 +21,7 @@
 #define DEBUG_ESPP( fmt, ...)
 #endif
 
-//These are ordinarily defined int eh remote debug output macros but need writing for Serial if remote debugging is disabled
-
+//These are ordinarily defined in the remote debug output macros but need redirecting to Serial if remote debugging is disabled but debugging output is still required. 
 #if defined DEBUG_DISABLED
 #define debugE( fmt, ... ) Serial.printf( fmt, __VA_ARGS__ )
 #define debugW( fmt, ... ) Serial.printf( fmt, __VA_ARGS__ )

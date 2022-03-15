@@ -83,7 +83,7 @@ void handleDiscovery( int udpBytesCount )
     debugD( "Searching for %s in discovery string in UDP bytes ", protocol );
 	if(strncmp( discoveryPacket.protocol, (char *)protocol, 14) == 0)
     {
-      debugI( "UDP discovery string match");
+      debugI( "%s", "UDP discovery string match");
 	  Udp.beginPacket( Udp.remoteIP(), Udp.remotePort() );
       //Respond with discovery message
 	  root["AlpacaPort"] = 80;
