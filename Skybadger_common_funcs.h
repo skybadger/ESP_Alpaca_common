@@ -149,7 +149,7 @@ void reconnectNB()
      if( timeoutFlag ) //Timeout - try again
      {   
          DEBUG_MQTT(F("Repeating MQTT connection attempt..."));
-         if ( !client.connect( thisID, String(pubsubUserID).c_str(), String(pubsubUserPwd).c_str() ) ) //PROGMEM
+         if ( !client.connect(  thisID, pubsubUserID, pubsubUserPwd ) ) //PROGMEM
          {  //Set a one-off timer to try next time around. 
             DEBUG_MQTT( F("connect failed, rc="), client.state() );
             Serial.println( client.state() );
@@ -166,7 +166,7 @@ void reconnectNB()
    else //timer not set 
    {
      Serial.print( F("Attempting MQTT connection..."));
-     if ( !client.connect( thisID, String(pubsubUserID).c_str(), String(pubsubUserPwd ).c_str() ) ) //PROGMEM
+     if ( !client.connect( thisID, pubsubUserID, pubsubUserPwd ) ) //PROGMEM
      {  
         DEBUG_MQTT(F("connect failed, rc=%i"), client.state() );
         //Serial.println( client.state());
@@ -179,7 +179,7 @@ void reconnectNB()
      else
      {
         //publishHealth();
-        client.subscribe( String(inTopic).c_str(), 1); //PROGMEM
+        client.subscribe( inTopic, 1); //PROGMEM
         DEBUG_MQTT(F("MQTT connection regained.") );
      }
    }

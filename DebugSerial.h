@@ -9,9 +9,9 @@
 #define DEBUGS2(a,b)  Serial.print(a, b)
 #define DEBUGSL1(a)   Serial.println(a)
 #define DEBUGSL2(a,b) Serial.println(a, b)
-#define DEBUG_ESP(...) Serial.printf( __VA_ARGS__ )
-#define DEBUG_ESPP( ...) Serial.printf_P( PSTR(fmt) )
-#define DEBUG_ESPP( fmt, ...) Serial.printf_P( PSTR(fmt), __VA_ARGS__ )
+//#define DEBUG_ESP  (...)      Serial.printf( __VA_ARGS__ )
+//#define DEBUG_ESPP (...)      Serial.printf_P( PSTR(fmt) )
+#define DEBUG_ESP    (fmt, ...) Serial.printf_P( PSTR(fmt), __VA_ARGS__ )
 #else
 #define DEBUGS1(a) 
 #define DEBUGS2(a,b) 

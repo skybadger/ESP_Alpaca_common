@@ -6,6 +6,7 @@ Also includes default ALPACA Discovery handlers - you will need to listen for th
 */
 /*Change Log
 01/06/2021 Updated getActions to return empty array rather than array[] with an empty string to pass Conform compliance checks - tested with dome. 
+31/03/2025 Updated InterfaceVersion to return uint32 instead of String due to ASCOM strict checking introduced after release v7
 */
 
 //Assumes Use of ARDUINO ESP8266WebServer for entry handlers
@@ -25,15 +26,15 @@ Also includes default ALPACA Discovery handlers - you will need to listen for th
 #endif
 
 /*
-Required External variables - Specify these in your driver - they are driver type specific. 
-extern bool connected;
+Required External variables - Specify these in your driver - they are driver type and instance specific. 
+extern unsigned int connected;
 extern String DriverName;
 extern String DriverVersion;
 extern String DriverInfo;
 extern String Description;
 extern String InterfaceVersion;
 extern char[] GUID
-extern int instanceNumber;
+extern unsigned int instanceNumber;
 extern float instanceVersion;
 extern char[] Location;
 */
@@ -41,7 +42,8 @@ extern char[] Location;
 int serverTransID= 0;
 
 //Used to track whic device last connected- if !NOT_CONNECTED then contains the ID of the connected client.
-const unsigned int NOT_CONNECTED = (unsigned int) -1;
+//clientID can be any integer from 0 up so this needs to be unsigned .. 
+const unsigned int NOT_CONNECTED = (unsigned int) 0;
 
 //PUT /{DeviceType}/{DeviceNumber}/Action Invokes the specified device-specific action.
 void handleAction(void);
@@ -160,7 +162,7 @@ void handleConnected(void)
     String message;
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
-    String argsToSearchFor[] = {"clientID","clientTransID","Connected"};
+    String argsToSearchFor[] = {"clientID","clientTransactionID","Connected"};
     uint32_t clientID = 0;
     uint32_t clientTransID = 0;
     bool tobeConnected = false;
@@ -176,10 +178,12 @@ void handleConnected(void)
     if( hasArgIC( argsToSearchFor[2], server, false ) )
        tobeConnected = (boolean) server.arg( argsToSearchFor[2]).equalsIgnoreCase( "true");
          
-    if ( server.method() == HTTP_PUT )
+    debugI( "connection info: existing connection %d, new: %d, transID %d, connection request : %s ", connected, clientID, clientTransID, (tobeConnected == true )? "true" : "false" );
+	
+	if ( server.method() == HTTP_PUT )
     { 
 #ifdef DEBUG_ESP_HTTP_SERVER
-DEBUG_OUTPUT.printf( "handleConnected: new: %s, this client ID: %i, connectedID: %i\n", server.arg(argsToSearchFor[2]).c_str(), clientID, connected );
+DEBUG_OUTPUT.printf( "handleConnected: new state: %d, this client ID: %i, connectedID: %i\n", tobeConnected, clientID, connected );
 #endif
       if ( server.hasArg( argsToSearchFor[2] ) )
       {
@@ -217,7 +221,7 @@ DEBUG_OUTPUT.printf( "handleConnected: new: %s, this client ID: %i, connectedID:
    #endif 
                 jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, F("Connected"), Success, "" );        
                 connected = NOT_CONNECTED; //OK
-                root["Value"] = false;
+                root["Value"] = true;
                 //root.remove( "Value" );
                 connectionCtr--;
              }
@@ -227,12 +231,12 @@ DEBUG_OUTPUT.printf( "handleConnected: new: %s, this client ID: %i, connectedID:
                 root["Value"] = false;
              }
            }
-           else //not already connected
+           else //not already connected, which is lucky 'cos we are asking not to be connected. 
            {
              //Check error numbers
              jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, F("Connected"), Success, "" );        
              //root.remove( "Value" );
-             root["Value"] = false;
+             root["Value"] = true;
              connected = NOT_CONNECTED;
            }
          }
@@ -325,6 +329,7 @@ DEBUG_OUTPUT.println( message );
     return ;
 }
 
+//Updated after ASCOM V7 release strictly requires this to be a uint32
 void handleInterfaceVersionGet(void)
 {
     String message;
@@ -335,7 +340,7 @@ void handleInterfaceVersionGet(void)
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
     jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, F("InterfaceVersion"), Success, "" );    
-    root["Value"]= String( InterfaceVersion); //From PROGMEM    
+    root["Value"]= (uint32) InterfaceVersion;
     root.printTo(message);
 #ifdef DEBUG_ESP_HTTP_SERVER
 DEBUG_OUTPUT.println( message );
